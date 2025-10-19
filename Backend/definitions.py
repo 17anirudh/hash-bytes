@@ -5,25 +5,14 @@ from pydantic import BaseModel, Field
 
 BASE = declarative_base()
 
-class AlgorithmEnum(Enum):
-    AES = "AES"
-    DES = "DES"
-    TripleDES = "3DES"
-    CAST128 = "CAST-128"
-    RC2 = "RC2"
-    CHACHA20 = "ChaCha20"
-    XCHACHA20 = "XChaCha20"
-    SALSA20 = "Salsa20"
-    RC4 = "RC4"
-
 class Table(BASE):
     __tablename__ = "operations"
     
-    id = Column(Integer, autoincrement="auto")
-    cipher_key = Column(String, primary_key=True, index=True)
-    file_extension = Column(String, default=None)
-    algorithm = Column(Enum(AlgorithmEnum))
-    mode = Column(String)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cipher_key = Column(String, nullable=False, index=True)
+    file_extension = Column(String, nullable=True)
+    algorithm = Column(String, nullable=False)
+    mode = Column(String, nullable=False)
     operation = Column(String, nullable=False)
     performed_at = Column(DateTime, default=datetime.now())
 
@@ -35,4 +24,5 @@ class EncryptRequest(BaseModel):
 class DecryptRequest(BaseModel):
     cipher: str
     key: str
+    mode: str
     algorithm: str = Field(None, description="Algorithm used")

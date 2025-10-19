@@ -1,4 +1,4 @@
-from definitions import Table, BASE, EncryptRequest, DecryptRequest, PyAlgorithmEnum
+from definitions import Table, BASE, EncryptRequest, DecryptRequest
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, Form, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
@@ -21,7 +21,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///audit.db'
 
 def get_db():
     db = SessionLocal()
@@ -30,12 +29,19 @@ def get_db():
     finally:
         db.close()
 
+@app.get("/")
+async def index():
+    return {
+        "message": "Hi bro",
+        "description": "Root route, app ready for API signals"
+    }
+
 @app.post("/encrypt-text")
 async def generate_cipher_text(field: EncryptRequest, db: Session = Depends(get_db)):
     cipher, key, algorithm, mode = encrypt_text(field.text, field.algorithm, field.mode)
     db_record = Table(
-        algorithm=algorithm,
         cipher_key=key,
+        algorithm=algorithm,
         mode=mode,
         operation="encryption",
     )
@@ -50,7 +56,7 @@ async def generate_cipher_text(field: EncryptRequest, db: Session = Depends(get_
 @app.post("/encrypt-file")
 async def generate_cipher_file(
     db: Session = Depends(get_db),
-    algorithm: PyAlgorithmEnum = Form(...),
+    algorithm: str = Form(...),
     file: UploadFile = File(...),
     mode: str = Form(...)
 ):
@@ -61,14 +67,14 @@ async def generate_cipher_file(
         ext = Path(file.filename).suffix
         content = await file.read()
         cipher, key, algorithm, mode = encrypt_file(
-            data=content,
+            content,
             algorithm=algorithm,
             mode=mode
         )
         
         db_record = Table(
-            algorithm=algorithm,
             cipher_key=key,
+            algorithm=algorithm,
             mode=mode,
             operation="encryption",
             file_extension=ext
@@ -87,3 +93,24 @@ async def generate_cipher_file(
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         await file.close()
+
+@app.post("/decrypt-text")
+async def generate_plain_text(field: DecryptRequest, db: Session = Depends(get_db)):
+    text = decrypt_text(
+        ciphertext_b64=field.cipher,
+        key_hex=field.key,
+        mode=field.mode,
+        algorithm=field.algorithm
+    )
+    db_record = Table(
+        cipher_key=field.key,
+        algorithm=field.algorithm,
+        mode=field.mode,
+        operation="decryption",
+    )
+    db.add(db_record)
+    db.commit()
+    db.refresh(db_record)
+    return {
+        "plain-text": text,
+    }
