@@ -2,7 +2,6 @@ from io import BytesIO
 from Crypto.Cipher import AES, DES, DES3, ChaCha20_Poly1305, CAST
 from Crypto.Random import get_random_bytes
 import base64
-import struct
 
 compatible_map: dict[str, list[str] | None] = {
     "AES":       ["ECB", "CBC", "CFB", "OFB", "CTR", "EAX", "GCM", "CCM", "SIV", "OCB"],
@@ -23,7 +22,7 @@ NONCE_SIZES = {
     "ChaCha20": {"ChaCha20_Poly1305": 12}
 }
 
-TAG_SIZE = 16  # Standard authentication tag size (16 bytes)
+TAG_SIZE = 16 
 
 def pad_data(data: bytes, block_size: int) -> bytes:
     """Add PKCS7 padding to data."""
@@ -38,9 +37,16 @@ def unpad_data(data: bytes, block_size: int) -> bytes:
 def encrypt_text(text: str, algorithm: str, mode: str):
     return encrypt_bytes(text.encode(), algorithm, mode)
 
-def encrypt_file(file_path: str, algorithm: str, mode: str):
-    with open(file_path, "rb") as f:
-        data = f.read()
+def encrypt_file(file_input, algorithm: str, mode: str):
+    """Encrypts either bytes or a file path string"""
+    if isinstance(file_input, (bytes, bytearray)):
+        data = file_input
+    elif isinstance(file_input, str):
+        with open(file_input, "rb") as f:
+            data = f.read()
+    else:
+        raise TypeError("encrypt_file() expects bytes or a valid file path string")
+
     return encrypt_bytes(data, algorithm, mode)
 
 def encrypt_bytes(data: bytes, algorithm: str, mode: str):
@@ -290,6 +296,9 @@ def decrypt_bytes(ciphertext_b64: str, key_hex: str, algorithm: str, mode: str):
                     cipher = DES.new(key, mode_constant, nonce=nonce)
                     data = cipher.decrypt(ciphertext)
             
+            if mode == "CBC":
+                data = unpad_data(data, 8)
+            
             return BytesIO(data)
         
         case "DES3":
@@ -314,6 +323,9 @@ def decrypt_bytes(ciphertext_b64: str, key_hex: str, algorithm: str, mode: str):
                     cipher = DES3.new(key, mode_constant, nonce=nonce)
                     data = cipher.decrypt(ciphertext)
             
+            if mode == "CBC":
+                data = unpad_data(data, 8)
+            
             return BytesIO(data)
         
         case "CAST-128":
@@ -330,6 +342,8 @@ def decrypt_bytes(ciphertext_b64: str, key_hex: str, algorithm: str, mode: str):
                 ciphertext = raw[iv_size:]
                 cipher = CAST.new(key, mode_constant, iv=iv)
                 data = cipher.decrypt(ciphertext)
+                if mode == "CBC":
+                    data = unpad_data(data, 8)
             
             return BytesIO(data)
         

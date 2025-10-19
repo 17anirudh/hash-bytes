@@ -9,6 +9,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarTrigger,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -42,15 +43,15 @@ export function AppSidebar() {
             <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5">
               <Link href="#">
                 <Hash className="!size-5" />
-                <span className="text-base font-semibold">HASH TEXT</span>
+                <span className="text-base font-semibold">HASH BYTES</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+      <SidebarTrigger className="cursor-pointer ml-2" />
       <SidebarContent>
         <SidebarGroup>
-          {/* <SidebarGroupLabel>HashFiles</SidebarGroupLabel> */}
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (

@@ -4,18 +4,20 @@ import { encryptSchema } from "../resolver/schema";
 import { decryptSchema } from "../resolver/schema";
 
 type encryptResponse = {
-    status: 'success' | 'error';
-    code: number,
-    message: string;
     key?: string,
     cipher?: string
+    status: 'success' | 'error';
+    code: number,
+    message: string,
+    input: 'text' | 'file',
 };
 
 type decryptResponse = {
     status: 'success' | 'error';
-    code?: number,
-    message: string;
-    text?: string
+    code: number,
+    message: string,
+    text?: string,
+    input: 'text' | 'file',
 };
 
 export async function encryption(values: z.infer<typeof encryptSchema>): Promise<encryptResponse> {
@@ -25,18 +27,17 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
             status: 'error',
             code: 400,
             message: result.error.message,
+            input: 'text'
         };
     }
     
     try {   
         let response;
-        
-        // Handle text encryption
         if (values.text) {
             const payload = {
                 text: values.text,
                 algorithm: values.algorithm,
-                mode: values.mode || "CBC",
+                mode: values.mode,
             };
             response = await fetch("http://127.0.0.1:8000/encrypt-text", {
                 method: 'POST',
@@ -45,54 +46,74 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
                 },
                 body: JSON.stringify(payload),
             });
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                return {
+                    status: 'error',
+                    input: 'text',
+                    code: response.status,
+                    message: errorText,
+                };
+            }
+            const data = await response.json();            
+            return {
+                status: 'success',
+                input: 'text',
+                message: 'Encryption completed successfully',
+                code: response.status,
+                key: data.key,
+                cipher: data.cipher
+            };
         }
-        // Handle file encryption
         else if (values.file && values.file.length > 0) {
             const formData = new FormData();
             formData.append("file", values.file[0]);
             formData.append("algorithm", values.algorithm);
-            formData.append("mode", values.mode || "CBC");
+            formData.append("mode", values.mode);
             
             response = await fetch("http://127.0.0.1:8000/encrypt-file", {
                 method: 'POST',
                 body: formData,
             });
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                return {
+                    status: 'error',
+                    input: 'file',
+                    code: response.status,
+                    message: errorText,
+                };
+            }
+            const data = await response.json();
+            console.log('Response data:', data);
+            
+            return {
+                status: 'success',
+                input: 'file',
+                message: 'Encryption completed successfully',
+                code: response.status,
+                key: data.key,
+                cipher: data.cipher
+            };
         }
         else {
             return {
                 status: 'error',
+                input: 'text',
                 code: 400,
                 message: 'Either text or file is required',
             };
         }
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Error response:', errorText);
-            return {
-                status: 'error',
-                code: response.status,
-                message: errorText,
-            };
-        }
-
-        const data = await response.json();
-        console.log('Response data:', data);
-        
-        return {
-            status: 'success',
-            message: 'Encryption completed successfully',
-            code: response.status,
-            key: data.key,
-            cipher: data.cipher
-        };
     } 
     catch (error) {
         console.error('Catch error:', error);
         return {
             status: 'error',
+            input: 'text',
             code: 501,
-            message: `Failed to submit your message: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            message: "Failed to submit your message",
         };
     }
 }

@@ -30,10 +30,9 @@ export default function RootLayout({
           <SidebarProvider defaultOpen={false}>
             <AppSidebar />
             <main>
-              <SidebarTrigger />
               {children}
             </main>
-            <Toaster richColors />
+            <Toaster richColors closeButton />
           </SidebarProvider>
         </ThemeProvider>
       </body>
