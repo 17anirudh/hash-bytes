@@ -8,4 +8,4 @@ NextJS, FastAPI and Sqlite based full stack web application to be as an educatio
 - Backend: FastAPI(Framework), Pydantic(Validation)
 - Database: SQLite(Database), SQLAlchemy(ORM)
 - Core logic: pycryptodome
-- Communication: REST API (application/json and multipart/form-data)
+- Communication: REST API (application/json, multipart/form-data and application/octect-stream)
