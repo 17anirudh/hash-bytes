@@ -1,15 +1,11 @@
 import z from "zod";
 
 export const algorithmEnums = z.enum([
-  "AES",
-  "DES",
-  "Triple-DES",
-  "CAST-128",
-  "RC2",
-  "ChaCha20",
-  "XChaCha20",
-  "SALSA20",
-  "RC4",
+  "AES", "DES", "DES3", "CAST-128", "ChaCha20",
+]);
+
+export const modeEnums = z.enum([
+  "ECB", "CBC", "CFB", "OFB", "CTR", "EAX", "GCM", "CCM", "SIV", "OCB", "ChaCha20_Poly1305"
 ]);
 
 export const encryptSchema = z
@@ -21,6 +17,7 @@ export const encryptSchema = z
             "Invalid file input"
           ),
     algorithm: algorithmEnums,
+    mode: modeEnums
   })
   .refine(
     (data) => data.text?.trim() || data.file?.length,
@@ -36,4 +33,9 @@ export const decryptSchema = z.object({
           "Invalid file input"
         ),
   algorithm: algorithmEnums,
+  mode: modeEnums
 })
+.refine(
+    (data) => data.cipher?.trim() || data.file?.length,
+    "Either text or file input is required."
+  )

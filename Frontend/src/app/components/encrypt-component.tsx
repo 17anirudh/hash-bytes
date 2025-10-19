@@ -26,8 +26,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { algorithmEnums } from "../resolver/schema";
+import { modeEnums } from "../resolver/schema"
 import { encryptSchema } from "../resolver/schema";
 import { encryption } from "../api/submit";
+import { toast } from "sonner"
 
 export default function EncryptComponent() {
   const form = useForm<z.infer<typeof encryptSchema>>({
@@ -35,12 +37,19 @@ export default function EncryptComponent() {
     defaultValues: {
       text: "",
       algorithm: "AES",
+      mode: "ECB",
       file: undefined,
     },
   })
 
   async function onSubmit(values: z.infer<typeof encryptSchema>) {
     const res = await encryption(values);
+    if(res.status == "error") {
+      toast(`${res.code}: ${res.message}`);
+    }
+    else {
+      toast("Successfull");
+    }
   }
 
   return (
@@ -131,6 +140,37 @@ export default function EncryptComponent() {
               </Select>
               <FieldDescription>
                 Pick the algorithm for encryption.
+              </FieldDescription>
+              {fieldState.invalid && (
+                <FieldError errors={[fieldState.error]} />
+              )}
+            </Field>
+          )}
+        />
+
+          {/* CIPHER MODE SELECT */}
+          <Controller
+          name="mode"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="encrypt-mode">
+                Select cipher mode
+              </FieldLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger id="encrypt-mode" className="w-[200px]">
+                  <SelectValue placeholder="Choose a cipher mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  {modeEnums.options.map((mode) => (
+                    <SelectItem key={mode} value={mode}>
+                      {mode}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldDescription>
+                Pick the cipher mode for encryption.
               </FieldDescription>
               {fieldState.invalid && (
                 <FieldError errors={[fieldState.error]} />

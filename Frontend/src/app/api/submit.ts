@@ -29,15 +29,42 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
     }
     
     try {   
-        const formData = new FormData();
-        if (values.text) formData.append("text", values.text);
-        if (values.file && values.file.length > 0)
+        let response;
+        
+        // Handle text encryption
+        if (values.text) {
+            const payload = {
+                text: values.text,
+                algorithm: values.algorithm,
+                mode: values.mode || "CBC",
+            };
+            response = await fetch("http://127.0.0.1:8000/encrypt-text", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+        }
+        // Handle file encryption
+        else if (values.file && values.file.length > 0) {
+            const formData = new FormData();
             formData.append("file", values.file[0]);
-        formData.append("algorithm", values.algorithm);     
-        const response = await fetch("http://127.0.0.1:8000/encrypt", {
-            method: 'POST',
-            body: formData,
-        });
+            formData.append("algorithm", values.algorithm);
+            formData.append("mode", values.mode || "CBC");
+            
+            response = await fetch("http://127.0.0.1:8000/encrypt-file", {
+                method: 'POST',
+                body: formData,
+            });
+        }
+        else {
+            return {
+                status: 'error',
+                code: 400,
+                message: 'Either text or file is required',
+            };
+        }
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -52,20 +79,12 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
         const data = await response.json();
         console.log('Response data:', data);
         
-        if (data.success === false) {
-            return {
-                status: 'error',
-                message: data.message || 'Prediction failed',
-                code: response.status
-            }
-        }
-        
         return {
             status: 'success',
-            message: 'Prediction completed successfully',
+            message: 'Encryption completed successfully',
             code: response.status,
             key: data.key,
-            cipher: data
+            cipher: data.cipher
         };
     } 
     catch (error) {
@@ -92,9 +111,10 @@ export async function decryption(values: z.infer<typeof decryptSchema>): Promise
         const payload = {
             cipher: values.cipher,
             key: values.key,
-            algorithm: values.algorithm
+            algorithm: values.algorithm,
+            mode: values.mode || "CBC",
         };
-        const response = await fetch("http://127.0.0.1:8000/decrypt", {
+        const response = await fetch("http://127.0.0.1:8000/decrypt-text", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -115,19 +135,11 @@ export async function decryption(values: z.infer<typeof decryptSchema>): Promise
         const data = await response.json();
         console.log('Response data:', data);
         
-        if (data.success === false) {
-            return {
-                status: 'error',
-                message: data.message || 'Prediction failed',
-                code: response.status
-            }
-        }
-        
         return {
             status: 'success',
-            message: 'Prediction completed successfully',
+            message: 'Decryption completed successfully',
             code: response.status,
-            text: data
+            text: data["plain-text"]
         };
     } 
     catch (error) {

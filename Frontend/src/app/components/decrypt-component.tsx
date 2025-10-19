@@ -26,7 +26,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { decryptSchema } from "../resolver/schema";
-import { algorithmEnums } from "../resolver/schema"
+import { algorithmEnums } from "../resolver/schema";
+import { modeEnums } from "../resolver/schema"
 
 export default function DecryptComponent() {
   const form = useForm<z.infer<typeof decryptSchema>>({
@@ -35,6 +36,7 @@ export default function DecryptComponent() {
       cipher: "",
       key: "",
       algorithm: "AES",
+      mode: "ECB"
     },
   })
 
@@ -63,7 +65,7 @@ export default function DecryptComponent() {
                 />
                 <InputGroupAddon align="block-end">
                   <InputGroupText className="tabular-nums">
-                    {field.value.length} characters
+                    {(field.value ?? "").length} characters
                   </InputGroupText>
                 </InputGroupAddon>
               </InputGroup>
@@ -109,7 +111,7 @@ export default function DecryptComponent() {
           )}
         />
 
-        {/* SELECT FIELD */}
+        {/* ALGORITHM FIELD */}
         <Controller
           name="algorithm"
           control={form.control}
@@ -142,6 +144,38 @@ export default function DecryptComponent() {
             </Field>
           )}
         />
+
+        
+                  {/* CIPHER MODE SELECT */}
+                  <Controller
+                  name="mode"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="encrypt-mode">
+                        Select cipher mode
+                      </FieldLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger id="encrypt-mode" className="w-[200px]">
+                          <SelectValue placeholder="Choose a cipher mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {modeEnums.options.map((mode) => (
+                            <SelectItem key={mode} value={mode}>
+                              {mode}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FieldDescription>
+                        Pick the cipher mode for encryption.
+                      </FieldDescription>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </Field>
+                  )}
+                />
       </FieldGroup>
       <Button type="submit" className="mt-4">
         Decrypt
