@@ -1,13 +1,13 @@
-from definitions import Table, BASE, EncryptRequest, DecryptRequest, EncryptResponse, DecryptResponse, PyAlgorithmEnum
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, Form
+from definitions import Table, BASE, EncryptRequest, DecryptRequest, PyAlgorithmEnum
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, Form, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from io import BytesIO
-from logic import text_handler, file_handler
+from pathlib import Path
+from logic import encrypt_text, encrypt_file, decrypt_file, decrypt_text
 
-DATABASE_URL = "sqlite:///../Database/audit.db"
+DATABASE_URL = "sqlite:///audit.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -21,6 +21,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///audit.db'
 
 def get_db():
     db = SessionLocal()
@@ -29,19 +30,60 @@ def get_db():
     finally:
         db.close()
 
-@app.post("/encrypt-text", response_model=EncryptResponse)
-async def encrypt_text(field: EncryptRequest, db: Session = Depends(get_db)):
-    db_record = Table(algorithm=field.algorithm, operation="Encryption")
+@app.post("/encrypt-text")
+async def generate_cipher_text(field: EncryptRequest, db: Session = Depends(get_db)):
+    cipher, key, algorithm, mode = encrypt_text(field.text, field.algorithm, field.mode)
+    db_record = Table(
+        algorithm=algorithm,
+        cipher_key=key,
+        mode=mode,
+        operation="encryption",
+    )
     db.add(db_record)
     db.commit()
     db.refresh(db_record)
+    return {
+        "cipher": cipher,
+        "key": key,
+    }
+
+@app.post("/encrypt-file")
+async def generate_cipher_file(
+    db: Session = Depends(get_db),
+    algorithm: PyAlgorithmEnum = Form(...),
+    file: UploadFile = File(...),
+    mode: str = Form(...)
+):
+    if not file:
+        raise HTTPException(status_code=400, detail="File is required")
     
-
-
-
-@app.post("/decrypt", response_model=DecryptResponse)
-async def decrypt(field: DecryptRequest, db: Session = Depends(get_db)):
-    db_record = Table(algorithm=field.algorithm, operation="Decryption")
-    db.add(db_record)
-    db.commit()
-    db.refresh(db_record)
+    try:
+        ext = Path(file.filename).suffix
+        content = await file.read()
+        cipher, key, algorithm, mode = encrypt_file(
+            data=content,
+            algorithm=algorithm,
+            mode=mode
+        )
+        
+        db_record = Table(
+            algorithm=algorithm,
+            cipher_key=key,
+            mode=mode,
+            operation="encryption",
+            file_extension=ext
+        )
+        db.add(db_record)
+        db.commit()
+        db.refresh(db_record)
+        
+        return {
+            "cipher": cipher,
+            "key": key,
+        }
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await file.close()

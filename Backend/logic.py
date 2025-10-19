@@ -13,6 +13,14 @@ compatible_map: dict[str, list[str] | None] = {
     "XChaCha20": ["ChaCha20_Poly1305"],                            
 }
 
+def encrypt_text(text: str, algorithm: str, mode: str):
+    return encrypt_bytes(text.encode(), algorithm, mode)
+
+def encrypt_file(file_path: str, algorithm: str, mode: str):
+    with open(file_path, "rb") as f:
+        data = f.read()
+    return encrypt_bytes(data, algorithm, mode)
+
 def encrypt_bytes(data: bytes, algorithm: str, mode: str):
     """
     Params: Data(in bytes), Encryption Algorithm and Cipher Mode.
@@ -208,20 +216,8 @@ def decrypt_bytes(ciphertext_b64: str, key_hex: str, algorithm: str, mode: str):
                 raise ValueError(f"{algorithm} supports ony {mode} cipher mode")
             return BytesIO(data)
 
-
-def encrypt_text(text: str, algorithm: str, mode: str):
-    return encrypt_bytes(text.encode(), algorithm, mode)
-
-
 def decrypt_text(ciphertext_b64: str, key_hex: str, algorithm: str, mode: str):
     return decrypt_bytes(ciphertext_b64, key_hex, algorithm, mode).getvalue().decode()
-
-
-def encrypt_file(file_path: str, algorithm: str, mode: str):
-    with open(file_path, "rb") as f:
-        data = f.read()
-    return encrypt_bytes(data, algorithm, mode)
-
 
 def decrypt_file(ciphertext_b64: str, key_hex: str, output_path: str, algorithm: str, mode: str):
     stream = decrypt_bytes(ciphertext_b64, key_hex, algorithm, mode)
