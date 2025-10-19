@@ -28,17 +28,15 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
         };
     }
     
-    try {        
-        const payload = {
-            text: values.text,
-            algorithm: values.algorithm
-        };
+    try {   
+        const formData = new FormData();
+        if (values.text) formData.append("text", values.text);
+        if (values.file && values.file.length > 0)
+            formData.append("file", values.file[0]);
+        formData.append("algorithm", values.algorithm);     
         const response = await fetch("http://127.0.0.1:8000/encrypt", {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
+            body: formData,
         });
 
         if (!response.ok) {

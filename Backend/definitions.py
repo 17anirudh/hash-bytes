@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, Enum, DateTime
+from sqlalchemy import Column, Integer, Enum, DateTime
 from datetime import datetime
 from sqlalchemy.ext.declarative import declarative_base
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 BASE = declarative_base()
 
@@ -41,11 +41,11 @@ class Table(BASE):
     created_at = Column(DateTime, default=datetime.now())
 
 class EncryptRequest(BaseModel):
-    text: str
-    algorithm: PyAlgorithmEnum
+    text: str = Field(None, description="Text to encrypt")
+    algorithm: PyAlgorithmEnum = Field(..., description="Algorithm used")
 
 class EncryptResponse(BaseModel):
-    cipher: str
+    cipher: str = Field(None, description="Encrypted Text")
     key: str
 
 class DecryptRequest(BaseModel):

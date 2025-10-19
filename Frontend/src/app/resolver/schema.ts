@@ -12,13 +12,28 @@ export const algorithmEnums = z.enum([
   "RC4",
 ]);
 
-export const encryptSchema = z.object({
-  text: z.string().min(1, "At least one letter is necessary for encryption"),
-  algorithm: algorithmEnums,
-});
+export const encryptSchema = z
+  .object({
+    text: z.string().optional(),
+    file: z.any().optional()
+          .refine(
+            (val) => val == null || (val instanceof FileList && val.length > 0),
+            "Invalid file input"
+          ),
+    algorithm: algorithmEnums,
+  })
+  .refine(
+    (data) => data.text?.trim() || data.file?.length,
+    "Either text or file input is required."
+  )
 
 export const decryptSchema = z.object({
-  cipher: z.string(),
+  cipher: z.string().optional(),
   key: z.string(),
+  file: z.any().optional()
+        .refine(
+          (val) => val == null || (val instanceof FileList && val.length > 0),
+          "Invalid file input"
+        ),
   algorithm: algorithmEnums,
 })

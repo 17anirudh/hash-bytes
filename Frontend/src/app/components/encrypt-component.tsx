@@ -23,10 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
-import { encryptSchema } from "../resolver/schema"
-import { algorithmEnums } from "../resolver/schema"
+import { algorithmEnums } from "../resolver/schema";
+import { encryptSchema } from "../resolver/schema";
+import { encryption } from "../api/submit";
 
 export default function EncryptComponent() {
   const form = useForm<z.infer<typeof encryptSchema>>({
@@ -34,17 +35,23 @@ export default function EncryptComponent() {
     defaultValues: {
       text: "",
       algorithm: "AES",
+      file: undefined,
     },
   })
 
-  function onSubmit(values: z.infer<typeof encryptSchema>) {
-    toast(`${values.algorithm} change this function`);
+  async function onSubmit(values: z.infer<typeof encryptSchema>) {
+    const res = await encryption(values);
   }
 
   return (
-    <form id="form-encrypt" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    <form
+      id="form-encrypt"
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="space-y-6"
+      encType="multipart/form-data"
+    >
       <FieldGroup>
-        {/* TEXTAREA FIELD */}
+        {/* TEXT INPUT AREA */}
         <Controller
           name="text"
           control={form.control}
@@ -62,12 +69,12 @@ export default function EncryptComponent() {
                 />
                 <InputGroupAddon align="block-end">
                   <InputGroupText className="tabular-nums">
-                    {field.value.length} characters
+                    {field.value?.length || 0}/100 characters
                   </InputGroupText>
                 </InputGroupAddon>
               </InputGroup>
               <FieldDescription>
-                Paste the text you want to encrypt
+                Type or paste text you want to encrypt.
               </FieldDescription>
               {fieldState.invalid && (
                 <FieldError errors={[fieldState.error]} />
@@ -76,7 +83,32 @@ export default function EncryptComponent() {
           )}
         />
 
-        {/* SELECT FIELD */}
+        {/* FILE INPUT FIELD */}
+        <Controller
+          name="file"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="encrypt-file">
+                Upload a file (optional)
+              </FieldLabel>
+              <Input
+                id="encrypt-file"
+                type="file"
+                onChange={(e) => field.onChange(e.target.files)}
+                className="w-full"
+              />
+              <FieldDescription>
+                You can upload a file instead of entering text.
+              </FieldDescription>
+              {fieldState.invalid && (
+                <FieldError errors={[fieldState.error]} />
+              )}
+            </Field>
+          )}
+        />
+
+        {/* ALGORITHM SELECT */}
         <Controller
           name="algorithm"
           control={form.control}
@@ -85,10 +117,7 @@ export default function EncryptComponent() {
               <FieldLabel htmlFor="encrypt-algorithm">
                 Select encryption algorithm
               </FieldLabel>
-              <Select
-                value={field.value}
-                onValueChange={field.onChange}
-              >
+              <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger id="encrypt-algorithm" className="w-[200px]">
                   <SelectValue placeholder="Choose algorithm" />
                 </SelectTrigger>
@@ -101,7 +130,7 @@ export default function EncryptComponent() {
                 </SelectContent>
               </Select>
               <FieldDescription>
-                Pick the algorithm used for encryption
+                Pick the algorithm for encryption.
               </FieldDescription>
               {fieldState.invalid && (
                 <FieldError errors={[fieldState.error]} />
@@ -110,6 +139,7 @@ export default function EncryptComponent() {
           )}
         />
       </FieldGroup>
+
       <Button type="submit" className="mt-4">
         Encrypt
       </Button>
