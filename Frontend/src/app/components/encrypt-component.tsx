@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button";
 import { algorithmEnums } from "../resolver/schema";
 import { modeEnums } from "../resolver/schema";
 import { encryptSchema } from "../resolver/schema";
-import { encryption } from "../api/submit";
+import { encryption } from "../api/encrypt";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -212,8 +212,9 @@ export default function EncryptComponent() {
           <CardDescription>Results after encryption</CardDescription>
         </CardHeader>
         <CardContent>
-          <h2>Cipher: {outputData.cipher}</h2>
           <h2>Key: {outputData.key}</h2>
+          {outputData.input === 'text' && <h2>Cipher: {outputData.cipher}</h2>}
+          {outputData.input === 'file' && <p>Encrypted file has been downloaded.</p>}
           <p>Decryption of this cipher only works perfectly if you enter used algorithm and mode for encryption</p>
         </CardContent>
       </Card>

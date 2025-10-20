@@ -1,0 +1,130 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Landing Page</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1c2526 0%, #2a2e33 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #f5deb3; /* Wheat font color */
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 600px;
+            background: #2a2e33;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: #f5deb3; /* Wheat */
+        }
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            color: #d2b48c; /* Slightly darker wheat for contrast */
+        }
+        .routes {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .route {
+            background: #3a3f47;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: #f5deb3; /* Wheat */
+            border: 1px solid #8a2be2; /* Violet accent */
+        }
+        .route:hover {
+            background: #4a4f5a;
+            border-color: #9b30ff; /* Lighter violet on hover */
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .cta {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: #8a2be2; /* Violet accent */
+            color: #f5deb3; /* Wheat */
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .cta:hover {
+            background: #9b30ff; /* Lighter violet on hover */
+            transition: background 0.3s;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Our API</h1>
+        <p>A simple, powerful API for your projects. Explore our endpoints below.</p>
+        <div class="routes">
+            <div class="route">POST /encrypt-text - Create a new resource</div>
+            <div class="route">POST /encrypt-file - Update an existing resource</div>
+            <div class="route">POST /decrypt-text - Delete a resource</div>
+            <div class="route">POST /decrypt-file - Query resources</div>
+        </div>
+        <a href="http://localhost:8000/" class="cta">View API Docs</a>
+    </div>
+</body>
+</html>

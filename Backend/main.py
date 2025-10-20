@@ -1,7 +1,10 @@
 from definitions import Table, BASE, EncryptRequest, DecryptRequest
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, Form, File, BackgroundTasks
+
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, Form, File, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from pathlib import Path
@@ -9,6 +12,7 @@ from logic import encrypt_text, encrypt_file, decrypt_file, decrypt_text
 import os
 import tempfile
 import base64
+from io import BytesIO
 
 DATABASE_URL = "sqlite:///audit.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -24,6 +28,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+templates = Jinja2Templates(directory="templates")
 
 def get_db():
     db = SessionLocal()
@@ -32,12 +37,9 @@ def get_db():
     finally:
         db.close()
 
-@app.get("/")
-async def index():
-    return {
-        "message": "Hi bro",
-        "description": "Root route, app ready for API signals"
-    }
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request, "message": "Hello, FastAPI!"})
 
 @app.post("/encrypt-text")
 async def generate_cipher_text(field: EncryptRequest, db: Session = Depends(get_db)):
@@ -62,12 +64,10 @@ async def generate_cipher_file(
     algorithm: str = Form(...),
     file: UploadFile = File(...),
     mode: str = Form(...),
-    background_tasks: BackgroundTasks = BackgroundTasks()
 ):
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
 
-    temp_file = None
     try:
         content = await file.read()
         ext = Path(file.filename).suffix 
@@ -87,22 +87,22 @@ async def generate_cipher_file(
         db.refresh(db_record)
 
         disguised_filename = f"{original_name}{ext}.enc"
+        encrypted_bytes = base64.b64decode(cipher_b64)
+        bio = BytesIO(encrypted_bytes)
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext, dir=tempfile.gettempdir()) as tmp:
-            tmp.write(base64.b64decode(cipher_b64))
-            temp_file = tmp.name
-            
-        background_tasks.add_task(cleanup_temp_file, temp_file)
-        return FileResponse(
-            path=temp_file,
-            filename=disguised_filename,
-            media_type="application/octet-stream"
+        headers = {
+            "Content-Disposition": f'attachment; filename="{disguised_filename}"',
+            "X-Encryption-Key": key,
+        }
+
+        return StreamingResponse(
+            bio,
+            media_type="application/octet-stream",
+            headers=headers
         )
 
     except Exception as e:
         db.rollback()
-        if temp_file and os.path.exists(temp_file):
-            os.remove(temp_file)
         raise HTTPException(status_code=500, detail=str(e))
 
     finally:
@@ -137,9 +137,9 @@ async def generate_plain_text(field: DecryptRequest, db: Session = Depends(get_d
 async def generate_plain_file(
     db: Session = Depends(get_db),
     algorithm: str = Form(...),
+    key: str = Form(...),
     file: UploadFile = File(...),
     mode: str = Form(...),
-    background_tasks: BackgroundTasks = BackgroundTasks()
 ):
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
@@ -150,16 +150,17 @@ async def generate_plain_file(
         ext = Path(file.filename).suffix 
         original_name = Path(file.filename).stem  
 
-        decrypted_data = decrypt_file(
-            ciphertext_b64=base64.b64encode(content).decode(),
-            key_hex="",  # Key should be provided by client
+        ciphertext_b64 = base64.b64encode(content).decode()
+        decrypted_bytes = decrypt_file(
+            ciphertext_b64=ciphertext_b64,
+            key_hex=key,
             output_path="",
             algorithm=algorithm,
             mode=mode
         )
 
         db_record = Table(
-            cipher_key="",
+            cipher_key=key,
             algorithm=algorithm, 
             mode=mode, 
             operation="decryption", 
@@ -171,32 +172,24 @@ async def generate_plain_file(
 
         original_filename = original_name if ext == ".enc" else f"{original_name}_decrypted{ext}"
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext, dir=tempfile.gettempdir()) as tmp:
-            tmp.write(decrypted_data.getvalue())
-            temp_file = tmp.name
-            
-        background_tasks.add_task(cleanup_temp_file, temp_file)
-        return FileResponse(
-            path=temp_file,
-            filename=original_filename,
-            media_type="application/octet-stream"
+        bio = BytesIO(decrypted_bytes)
+
+        headers = {
+            "Content-Disposition": f'attachment; filename="{original_filename}"',
+        }
+
+        return StreamingResponse(
+            bio,
+            media_type="application/octet-stream",
+            headers=headers
         )
 
     except Exception as e:
         db.rollback()
-        if temp_file and os.path.exists(temp_file):
-            os.remove(temp_file)
         raise HTTPException(status_code=500, detail=str(e))
 
     finally:
         await file.close()
-
-async def cleanup_temp_file(file_path: str):
-    """Background task to delete temporary file after response is sent"""
-    try:
-        os.remove(file_path)
-    except Exception as e:
-        print(f"Error deleting temp file: {e}")
 
 @app.get("/favicon.ico")
 async def favicon():
