@@ -10,7 +10,7 @@ import DecryptComponent from "./decrypt-component";
 
 export function TabsComponent() {
   return (
-    <div className="flex w-full max-w-sm flex-col gap-6">
+    <div className="w-full">
       <Tabs defaultValue="encrypt">
         <TabsList>
           <TabsTrigger value="encrypt"> <Encrypt/> Encrypt</TabsTrigger>

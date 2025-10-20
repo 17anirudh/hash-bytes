@@ -10,7 +10,7 @@ export default function Home() {
         <HeaderContent />
         <HeaderContent />
       </header>
-      <main className="mt-7 flex justify-center">
+      <main className="mt-7 flex justify-center p-20">
         <TabsComponent />
       </main>
       <footer className="bottom-0 mt-7">
