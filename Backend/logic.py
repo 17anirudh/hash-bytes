@@ -201,13 +201,13 @@ def encrypt_bytes(data: bytes, algorithm: str, mode: str):
             
             return base64.b64encode(combined).decode(), key.hex(), "CAST-128", mode
         
-        case "ChaCha20":
+        case "CHACHA20":
             key = get_random_bytes(32)
             nonce = get_random_bytes(12)
             # mode_constant = getattr(CAST, f"MODE_{mode}")
-            aead = ChaCha20_Poly1305.new(key)
-            ciphertext = aead.encrypt(nonce, data, None)
-            combined = nonce + ciphertext
+            cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
+            ciphertext, tag = cipher.encrypt_and_digest(data)
+            combined = nonce + tag + ciphertext
             
             return base64.b64encode(combined).decode(), key.hex(), "ChaCha20", "ChaCha20_Poly1305"
 
@@ -348,11 +348,11 @@ def decrypt_bytes(ciphertext_b64: str, key_hex: str, algorithm: str, mode: str):
             
             return BytesIO(data)
         
-        case "ChaCha20":
-            nonce_size = 12
-            nonce = raw[:nonce_size]
-            tag = raw[nonce_size:nonce_size + TAG_SIZE]
-            ciphertext = raw[nonce_size + TAG_SIZE:]
+        case "CHACHA20":
+            key = bytes.fromhex(key_hex)
+            nonce = raw[:12]
+            tag = raw[12:28]
+            ciphertext = raw[28:]
             cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
             data = cipher.decrypt_and_verify(ciphertext, tag)
             
