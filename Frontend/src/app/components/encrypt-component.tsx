@@ -53,6 +53,7 @@ export default function EncryptComponent() {
   })
 
   async function onSubmit(values: z.infer<typeof encryptSchema>) {
+    setOutput(false);
     const res = await encryption(values);
     if(res.status == "error") {
       toast.error(`${res.code}: ${res.message}`);
