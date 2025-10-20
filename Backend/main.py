@@ -98,7 +98,7 @@ async def generate_cipher_file(
         return StreamingResponse(
             bio,
             media_type="application/octet-stream",
-            headers=headers
+            headers=headers,
         )
 
     except Exception as e:

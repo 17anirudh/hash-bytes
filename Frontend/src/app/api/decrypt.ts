@@ -7,7 +7,7 @@ type decryptResponse = {
     status: 'success' | 'error';
     code: number;
     message: string;
-    input: 'text' | 'file';
+    input: 'text' | 'file' | null;
 };
 
 export async function decryption(values: z.infer<typeof decryptSchema>): Promise<decryptResponse> {
@@ -41,13 +41,11 @@ export async function decryption(values: z.infer<typeof decryptSchema>): Promise
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Error response:', errorText);
                 return {
                     status: 'error',
-                    input: 'text',
+                    input: null,
                     code: response.status,
-                    message: errorText,
+                    message: "Please re-check your key, algorithm or cipher",
                 };
             }
 

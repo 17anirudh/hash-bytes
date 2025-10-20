@@ -55,12 +55,12 @@ export default function EncryptComponent() {
   async function onSubmit(values: z.infer<typeof encryptSchema>) {
     const res = await encryption(values);
     if(res.status == "error") {
-      toast(`${res.code}: ${res.message}`);
+      toast.error(`${res.code}: ${res.message}`);
     }
     else {
       setOutput(true);
       setOutputData(res);
-      toast("Successfull");
+      toast.success("Successfull");
     }
   }
 
@@ -206,14 +206,14 @@ export default function EncryptComponent() {
       </CardContent>
     </Card>
     {output && 
-      <Card>
+      <Card className="w-fit">
         <CardHeader>
           <CardTitle>Results</CardTitle>
           <CardDescription>Results after encryption</CardDescription>
         </CardHeader>
         <CardContent>
-          <h2>Key: {outputData.key}</h2>
-          {outputData.input === 'text' && <h2>Cipher: {outputData.cipher}</h2>}
+          <h2>Key: {outputData.key}</h2> <br />
+          {outputData.input === 'text' && <h2>Cipher: <br /> {outputData.cipher}</h2>} <br />
           {outputData.input === 'file' && <p>Encrypted file has been downloaded.</p>}
           <p>Decryption of this cipher only works perfectly if you enter used algorithm and mode for encryption</p>
         </CardContent>

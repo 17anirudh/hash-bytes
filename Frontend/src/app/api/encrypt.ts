@@ -8,7 +8,7 @@ type encryptResponse = {
     status: 'success' | 'error';
     code: number;
     message: string;
-    input: 'text' | 'file';
+    input: 'text' | 'file' | null;
 };
 
 export async function encryption(values: z.infer<typeof encryptSchema>): Promise<encryptResponse> {
@@ -18,7 +18,7 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
             status: 'error',
             code: 400,
             message: result.error.message,
-            input: values.file ? 'file' : 'text',
+            input: null,
         };
     }
 
@@ -26,7 +26,6 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
 
     try {
         if (values.text) {
-            // Text encryption
             const payload = {
                 text: values.text,
                 algorithm: values.algorithm,
@@ -42,7 +41,14 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('Error response:', errorText);
+                if (response.status == 501) {
+                    return {
+                        status: 'error',
+                        input: 'file',
+                        code: response.status,
+                        message: `${payload.algorithm} is not compatible with ${payload.mode}`,
+                    };
+                }
                 return {
                     status: 'error',
                     input: 'text',
@@ -61,7 +67,6 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
                 cipher: data.cipher,
             };
         } else if (values.file && values.file.length > 0) {
-            // File encryption
             const formData = new FormData();
             formData.append("file", values.file[0]);
             formData.append("algorithm", values.algorithm);
@@ -74,7 +79,14 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('Error response:', errorText);
+                if (response.status === 501) {
+                    return {
+                        status: 'error',
+                        input: 'file',
+                        code: response.status,
+                        message: errorText,
+                    };
+                }
                 return {
                     status: 'error',
                     input: 'file',
@@ -83,7 +95,7 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
                 };
             }
 
-            const key = response.headers.get('X-Encryption-Key') || '';
+            const key = response.headers.get('X-Encryption-Key') || response.headers.get('x-encryption-key') || '';
             const blob = await response.blob();
             const contentDisposition = response.headers.get('Content-Disposition');
             console.log('Content-Disposition header:', contentDisposition); // Debug log

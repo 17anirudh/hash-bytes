@@ -56,12 +56,12 @@ export default function DecryptComponent() {
   async function onSubmit(values: z.infer<typeof decryptSchema>) {
     const res = await decryption(values);
     if(res.status == "error") {
-      toast(`${res.code}: ${res.message}`);
+      toast.error(`${res.code}: ${res.message}`);
     }
     else {
       setOutput(true);
       setOutputData(res);
-      toast("Successful");
+      toast.success("Successful");
     }
   }
 

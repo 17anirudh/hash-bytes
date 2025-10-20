@@ -204,9 +204,10 @@ def encrypt_bytes(data: bytes, algorithm: str, mode: str):
         case "ChaCha20":
             key = get_random_bytes(32)
             nonce = get_random_bytes(12)
-            cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
-            ciphertext, tag = cipher.encrypt_and_digest(data)
-            combined = nonce + tag + ciphertext
+            # mode_constant = getattr(CAST, f"MODE_{mode}")
+            aead = ChaCha20_Poly1305.new(key)
+            ciphertext = aead.encrypt(nonce, data, None)
+            combined = nonce + ciphertext
             
             return base64.b64encode(combined).decode(), key.hex(), "ChaCha20", "ChaCha20_Poly1305"
 
