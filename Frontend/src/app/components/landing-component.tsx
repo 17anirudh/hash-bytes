@@ -1,10 +1,12 @@
 import DottedGlowBackground from "@/components/ui/dotted-glow-background";
+import { GlobeDemo } from "./globe-component";
 
 export default function Landing() {
     return (
         <div>
             <div>
                 <h1 className="text-7xl text-amber-500 text-center mt-9">HASH BYTES</h1>
+                {/* <GlobeDemo /> */}
                 <p></p>
             </div>
             <DottedGlowBackground

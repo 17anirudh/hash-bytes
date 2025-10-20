@@ -66,7 +66,7 @@ export default function DecryptComponent() {
   }
 
   return (
-    <>
+    <div className="max-w-9/12">
       <Card>
       <CardHeader>
         <CardTitle>Decrypt Form</CardTitle>
@@ -250,6 +250,6 @@ export default function DecryptComponent() {
         </CardContent>
       </Card>
     }
-    </>
+    </div>
   )
 }

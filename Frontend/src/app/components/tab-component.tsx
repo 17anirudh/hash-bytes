@@ -10,7 +10,7 @@ import DecryptComponent from "./decrypt-component";
 
 export function TabsComponent() {
   return (
-    <div className="w-full">
+    <div className="w-full pl-12 sm:pl-32">
       <Tabs defaultValue="encrypt">
         <TabsList>
           <TabsTrigger value="encrypt"> <Encrypt/> Encrypt</TabsTrigger>
@@ -22,7 +22,9 @@ export function TabsComponent() {
           </div>
         </TabsContent>
         <TabsContent value="decrypt">
-            <DecryptComponent />
+            <div className="w-full">
+              <DecryptComponent />
+            </div>
         </TabsContent>
       </Tabs>
     </div>
