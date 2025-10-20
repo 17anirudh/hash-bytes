@@ -66,7 +66,7 @@ export default function EncryptComponent() {
   }
 
   return (
-    <div className="max-w-9/12">
+    <div className="max-w-9/12 break-words whitespace-normal">
       <Card>
       <CardHeader>
         <CardTitle>Encrypt Form</CardTitle>

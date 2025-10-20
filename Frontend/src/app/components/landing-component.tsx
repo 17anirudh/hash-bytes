@@ -6,7 +6,7 @@ export default function Landing() {
         <div>
             <div>
                 <h1 className="text-7xl text-amber-500 text-center mt-9">HASH BYTES</h1>
-                {/* <GlobeDemo /> */}
+                <GlobeDemo />
                 <p></p>
             </div>
             <DottedGlowBackground

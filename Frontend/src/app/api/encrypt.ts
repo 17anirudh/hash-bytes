@@ -10,6 +10,21 @@ type encryptResponse = {
     message: string;
     input: 'text' | 'file' | null;
 };
+const compatible_map = {
+    "AES":       ["ECB", "CBC", "CFB", "OFB", "CTR", "EAX", "GCM", "CCM", "SIV", "OCB"],
+    "DES":       ["ECB", "CBC", "CFB", "OFB", "CTR"],          
+    "DES3":      ["ECB", "CBC", "CFB", "OFB", "CTR"],        
+    "CAST-128":  ["ECB", "CBC", "CFB", "OFB"],                      
+    "ChaCha20":  ["ChaCha20_Poly1305"],                            
+}
+
+function isCipherModeSupported(algorithm: string, mode: string): boolean {
+    const supportedModes = compatible_map[algorithm as keyof typeof compatible_map];
+    if (!supportedModes) {
+        return false; 
+    }
+    return supportedModes.includes(mode);
+}
 
 export async function encryption(values: z.infer<typeof encryptSchema>): Promise<encryptResponse> {
     const result = encryptSchema.safeParse(values);
@@ -18,6 +33,18 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
             status: 'error',
             code: 400,
             message: result.error.message,
+            input: null,
+        };
+    }
+
+    const { algorithm, mode } = result.data;
+
+    if (!isCipherModeSupported(algorithm, mode)) {
+        const supportedModes = compatible_map[algorithm as keyof typeof compatible_map];
+        return {
+            status: 'error',
+            code: 422,
+            message: `Cipher mode "${mode}" is not supported for ${algorithm}. Supported modes: ${supportedModes?.join(', ') || 'None'}`,
             input: null,
         };
     }

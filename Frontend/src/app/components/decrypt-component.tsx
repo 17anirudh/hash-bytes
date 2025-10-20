@@ -66,7 +66,7 @@ export default function DecryptComponent() {
   }
 
   return (
-    <div className="max-w-9/12">
+    <div className="max-w-9/12 break-words whitespace-normal">
       <Card>
       <CardHeader>
         <CardTitle>Decrypt Form</CardTitle>
