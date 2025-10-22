@@ -38,6 +38,7 @@ import { decryptSchema } from "../resolver/schema";
 import { decryption } from "../api/decrypt";
 import { toast } from "sonner";
 import { useState } from "react";
+import Clipboard from "./clipboard";
 
 export default function DecryptComponent() {
   const [output, setOutput] = useState<boolean>(false);
@@ -239,13 +240,22 @@ export default function DecryptComponent() {
       </CardContent>
     </Card>
     {output && 
-      <Card>
+      <Card className="mt-12">
         <CardHeader>
           <CardTitle>Results</CardTitle>
           <CardDescription>Results after decryption</CardDescription>
         </CardHeader>
         <CardContent>
-          {outputData.input === 'text' && <h2>Plain Text: {outputData.plain}</h2>}
+          {
+            outputData.input === 'text' && (
+              <>
+                <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">Plain Text:</h4> 
+                <br /> 
+                <Clipboard value={outputData.plain} />
+              </>
+            )
+          }
+          <br />
           {outputData.input === 'file' && <p>Decrypted file has been downloaded.</p>}
         </CardContent>
       </Card>

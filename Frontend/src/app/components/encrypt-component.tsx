@@ -37,6 +37,7 @@ import { modeEnums } from "../resolver/schema";
 import { encryptSchema } from "../resolver/schema";
 import { encryption } from "../api/encrypt";
 import { toast } from "sonner";
+import Clipboard from "./clipboard";
 import { useState } from "react";
 
 export default function EncryptComponent() {
@@ -206,19 +207,43 @@ export default function EncryptComponent() {
         </form>
       </CardContent>
     </Card>
-    {output && 
-      <Card className="w-fit">
-        <CardHeader>
-          <CardTitle>Results</CardTitle>
-          <CardDescription>Results after encryption</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <h2>Key: {outputData.key}</h2> <br />
-          {outputData.input === 'text' && <h2>Cipher: <br /> {outputData.cipher}</h2>} <br />
-          {outputData.input === 'file' && <p>Encrypted file has been downloaded.</p>}
-          <p>Decryption of this cipher only works perfectly if you enter used algorithm and mode for encryption</p>
-        </CardContent>
-      </Card>
+    {output && (
+      <>
+        <Card className="w-full mt-12">
+          <CardHeader>
+            <CardTitle className="scroll-m-20 text-xl font-semibold tracking-tight">Results</CardTitle>
+            <CardDescription className="leading-7 [&:not(:first-child)]">Results after encryption</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col">
+            <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">Key:</h4>
+            <br />
+            <Clipboard value={outputData.key} />
+            <br />
+            {
+              outputData.input === 'text' && (
+                <>
+                  <h4 className="scroll-m-20 text-xl font-semibold tracking-tight">Cipher:</h4>
+                  <br />
+                  <Clipboard value={outputData.cipher} />
+                  <br />
+                </>
+              )
+            } 
+            <br />
+            {
+              outputData.input === 'file' &&  (
+                <>  
+                  <p className="leading-7 [&:not(:first-child)]:mt-6">Encrypted file has been downloaded.</p>
+                </>
+              )
+            }
+            <p className="leading-7 [&:not(:first-child)]:mt-6">
+              Decryption of this cipher only works perfectly if you enter used algorithm and mode for encryption.
+            </p>
+          </CardContent>
+        </Card>
+      </>
+    )
     }
     </div>
   )

@@ -211,157 +211,115 @@ def encrypt_bytes(data: bytes, algorithm: str, mode: str):
             
             return base64.b64encode(combined).decode(), key.hex(), "ChaCha20", "ChaCha20_Poly1305"
 
-def decrypt_bytes(ciphertext_b64: str, key_hex: str, algorithm: str, mode: str):
-    """MAIN DECRYPTION LOGIC"""
+def decrypt_bytes(ciphertext, key_hex: str, algorithm: str, mode: str) -> BytesIO:
+    """Decrypt raw bytes or BytesIO using your NONCE_SIZES and PKCS7 padding"""
     algorithm = algorithm.upper()
     mode = mode.upper()
     key = bytes.fromhex(key_hex)
-    raw = base64.b64decode(ciphertext_b64)
 
-    match algorithm:
-        case "AES":
-            mode_constant = getattr(AES, f"MODE_{mode}")
-            
-            if mode == "ECB":
-                cipher = AES.new(key, mode_constant)
-                padded_data = cipher.decrypt(raw)
-                data = unpad_data(padded_data, 16)
-            
-            elif mode == "CBC":
-                iv_size = NONCE_SIZES["AES"][mode]
-                iv = raw[:iv_size]
-                ciphertext = raw[iv_size:]
-                cipher = AES.new(key, mode_constant, iv=iv)
-                padded_data = cipher.decrypt(ciphertext)
-                data = unpad_data(padded_data, 16)
-            
-            elif mode in ["CFB", "OFB"]:
-                iv_size = NONCE_SIZES["AES"][mode]
-                iv = raw[:iv_size]
-                ciphertext = raw[iv_size:]
-                cipher = AES.new(key, mode_constant, iv=iv)
-                data = cipher.decrypt(ciphertext)
-            
-            elif mode == "CTR":
-                nonce_size = NONCE_SIZES["AES"]["CTR"]
-                nonce = raw[:nonce_size]
-                ciphertext = raw[nonce_size:]
-                cipher = AES.new(key, mode_constant, nonce=nonce)
-                data = cipher.decrypt(ciphertext)
-            
-            elif mode in ["EAX", "GCM", "OCB"]:
-                nonce_size = NONCE_SIZES["AES"][mode]
-                nonce = raw[:nonce_size]
-                tag = raw[nonce_size:nonce_size + TAG_SIZE]
-                ciphertext = raw[nonce_size + TAG_SIZE:]
-                cipher = AES.new(key, mode_constant, nonce=nonce)
-                data = cipher.decrypt_and_verify(ciphertext, tag)
-            
-            elif mode == "CCM":
-                nonce_size = NONCE_SIZES["AES"]["CCM"]
-                nonce = raw[:nonce_size]
-                tag = raw[nonce_size:nonce_size + TAG_SIZE]
-                ciphertext = raw[nonce_size + TAG_SIZE:]
-                cipher = AES.new(key, mode_constant, nonce=nonce)
-                data = cipher.decrypt_and_verify(ciphertext, tag)
-            
-            elif mode == "SIV":
-                tag = raw[:TAG_SIZE]
-                nonce_size = NONCE_SIZES["AES"]["SIV"]
-                nonce = raw[TAG_SIZE:TAG_SIZE + nonce_size]
-                ciphertext = raw[TAG_SIZE + nonce_size:]
-                cipher = AES.new(key, mode_constant, nonce=nonce)
-                data = cipher.decrypt_and_verify(ciphertext, tag)
-            
-            return BytesIO(data)
-        
-        case "DES":
-            mode_constant = getattr(DES, f"MODE_{mode}")
-            
-            if mode == "ECB":
-                cipher = DES.new(key, mode_constant)
-                padded_data = cipher.decrypt(raw)
-                data = unpad_data(padded_data, 8)
-            
-            else:  # CBC, CFB, OFB, CTR
-                if mode in ["CBC", "CFB", "OFB"]:
-                    iv_size = NONCE_SIZES["DES"][mode]
-                    iv = raw[:iv_size]
-                    ciphertext = raw[iv_size:]
-                    cipher = DES.new(key, mode_constant, iv=iv)
-                    data = cipher.decrypt(ciphertext)
-                else:  # CTR
-                    nonce_size = NONCE_SIZES["DES"]["CTR"]
-                    nonce = raw[:nonce_size]
-                    ciphertext = raw[nonce_size:]
-                    cipher = DES.new(key, mode_constant, nonce=nonce)
-                    data = cipher.decrypt(ciphertext)
-            
+    # Convert BytesIO or base64 string to bytes
+    if isinstance(ciphertext, BytesIO):
+        raw = ciphertext.getvalue()
+    elif isinstance(ciphertext, str):
+        raw = base64.b64decode(ciphertext)
+    else:
+        raw = ciphertext  # already bytes
+
+    if algorithm == "AES":
+        mode_constant = getattr(AES, f"MODE_{mode}")
+
+        if mode == "ECB":
+            block_size = 16
+            if len(raw) % block_size != 0:
+                raise ValueError(f"Ciphertext length {len(raw)} not aligned to {block_size}-byte block for ECB")
+            cipher = AES.new(key, mode_constant)
+            padded_data = cipher.decrypt(raw)
+            data = unpad_data(padded_data, block_size)
+
+        elif mode == "CBC":
+            iv_size = NONCE_SIZES["AES"]["CBC"]
+            iv, ciphertext_bytes = raw[:iv_size], raw[iv_size:]
+            cipher = AES.new(key, mode_constant, iv=iv)
+            padded_data = cipher.decrypt(ciphertext_bytes)
+            data = unpad_data(padded_data, 16)
+
+        elif mode in ["CFB", "OFB"]:
+            iv_size = NONCE_SIZES["AES"][mode]
+            iv, ciphertext_bytes = raw[:iv_size], raw[iv_size:]
+            cipher = AES.new(key, mode_constant, iv=iv)
+            data = cipher.decrypt(ciphertext_bytes)
+
+        elif mode == "CTR":
+            nonce_size = NONCE_SIZES["AES"]["CTR"]
+            nonce, ciphertext_bytes = raw[:nonce_size], raw[nonce_size:]
+            cipher = AES.new(key, mode_constant, nonce=nonce)
+            data = cipher.decrypt(ciphertext_bytes)
+
+        elif mode in ["EAX", "GCM", "OCB", "CCM", "SIV"]:
+            nonce_size = NONCE_SIZES["AES"].get(mode, 16)
+            nonce, tag = raw[:nonce_size], raw[nonce_size:nonce_size + TAG_SIZE]
+            ciphertext_bytes = raw[nonce_size + TAG_SIZE:]
+            cipher = AES.new(key, mode_constant, nonce=nonce)
+            data = cipher.decrypt_and_verify(ciphertext_bytes, tag)
+
+        else:
+            raise ValueError(f"Unsupported AES mode: {mode}")
+
+    elif algorithm in ["DES", "DES3", "CAST-128"]:
+        CIPHER = {"DES": DES, "DES3": DES3, "CAST-128": CAST}[algorithm]
+        mode_constant = getattr(CIPHER, f"MODE_{mode}")
+        block_size = 8
+
+        if mode == "ECB":
+            if len(raw) % block_size != 0:
+                raise ValueError(f"Ciphertext length {len(raw)} not aligned to {block_size}-byte block for ECB")
+            cipher = CIPHER.new(key, mode_constant)
+            padded_data = cipher.decrypt(raw)
+            data = unpad_data(padded_data, block_size)
+
+        elif mode in ["CBC", "CFB", "OFB"]:
+            iv_size = NONCE_SIZES[algorithm][mode]
+            iv, ciphertext_bytes = raw[:iv_size], raw[iv_size:]
+            cipher = CIPHER.new(key, mode_constant, iv=iv)
+            data = cipher.decrypt(ciphertext_bytes)
             if mode == "CBC":
-                data = unpad_data(data, 8)
-            
-            return BytesIO(data)
-        
-        case "DES3":
-            mode_constant = getattr(DES3, f"MODE_{mode}")
-            
-            if mode == "ECB":
-                cipher = DES3.new(key, mode_constant)
-                padded_data = cipher.decrypt(raw)
-                data = unpad_data(padded_data, 8)
-            
-            else:  # CBC, CFB, OFB, CTR
-                if mode in ["CBC", "CFB", "OFB"]:
-                    iv_size = NONCE_SIZES["DES3"][mode]
-                    iv = raw[:iv_size]
-                    ciphertext = raw[iv_size:]
-                    cipher = DES3.new(key, mode_constant, iv=iv)
-                    data = cipher.decrypt(ciphertext)
-                else:  # CTR
-                    nonce_size = NONCE_SIZES["DES3"]["CTR"]
-                    nonce = raw[:nonce_size]
-                    ciphertext = raw[nonce_size:]
-                    cipher = DES3.new(key, mode_constant, nonce=nonce)
-                    data = cipher.decrypt(ciphertext)
-            
-            if mode == "CBC":
-                data = unpad_data(data, 8)
-            
-            return BytesIO(data)
-        
-        case "CAST-128":
-            mode_constant = getattr(CAST, f"MODE_{mode}")
-            
-            if mode == "ECB":
-                cipher = CAST.new(key, mode_constant)
-                padded_data = cipher.decrypt(raw)
-                data = unpad_data(padded_data, 8)
-            
-            else:  # CBC, CFB, OFB
-                iv_size = NONCE_SIZES["CAST-128"][mode]
-                iv = raw[:iv_size]
-                ciphertext = raw[iv_size:]
-                cipher = CAST.new(key, mode_constant, iv=iv)
-                data = cipher.decrypt(ciphertext)
-                if mode == "CBC":
-                    data = unpad_data(data, 8)
-            
-            return BytesIO(data)
-        
-        case "CHACHA20":
-            key = bytes.fromhex(key_hex)
-            nonce = raw[:12]
-            tag = raw[12:28]
-            ciphertext = raw[28:]
-            cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
-            data = cipher.decrypt_and_verify(ciphertext, tag)
-            
-            return BytesIO(data)
+                data = unpad_data(data, block_size)
+
+        elif mode == "CTR":
+            nonce_size = NONCE_SIZES[algorithm]["CTR"]
+            nonce, ciphertext_bytes = raw[:nonce_size], raw[nonce_size:]
+            cipher = CIPHER.new(key, mode_constant, nonce=nonce)
+            data = cipher.decrypt(ciphertext_bytes)
+
+        else:
+            raise ValueError(f"Unsupported {algorithm} mode: {mode}")
+
+    elif algorithm == "CHACHA20":
+        nonce_size = NONCE_SIZES["ChaCha20"]["ChaCha20_Poly1305"]
+        nonce, tag, ciphertext_bytes = raw[:nonce_size], raw[nonce_size:nonce_size + TAG_SIZE], raw[nonce_size + TAG_SIZE:]
+        cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
+        data = cipher.decrypt_and_verify(ciphertext_bytes, tag)
+
+    else:
+        raise ValueError(f"Unsupported algorithm: {algorithm}")
+
+    return BytesIO(data)
 
 def decrypt_text(ciphertext_b64: str, key_hex: str, algorithm: str, mode: str):
     return decrypt_bytes(ciphertext_b64, key_hex, algorithm, mode).getvalue().decode()
 
-def decrypt_file(ciphertext_b64: str, key_hex: str, output_path: str, algorithm: str, mode: str):
-    stream = decrypt_bytes(ciphertext_b64, key_hex, algorithm, mode)
-    with open(output_path, "wb") as f:
-        f.write(stream.getvalue())
+def decrypt_file(key_hex: str, file_input, algorithm: str, mode: str):
+    if isinstance(file_input, (bytes, bytearray)):
+        data = file_input
+    elif isinstance(file_input, str):
+        with open(file_input, "rb") as f:
+            data = f.read()
+    else:
+        raise TypeError("decrypt_file() expects bytes or a valid file path string")
+
+    return decrypt_bytes(
+        ciphertext=data,
+        key_hex=key_hex,
+        algorithm=algorithm,
+        mode=mode
+    )

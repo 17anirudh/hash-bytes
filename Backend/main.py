@@ -1,6 +1,6 @@
 from definitions import Table, BASE, EncryptRequest, DecryptRequest
 
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, Form, File, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, Form, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -9,10 +9,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from pathlib import Path
 from logic import encrypt_text, encrypt_file, decrypt_file, decrypt_text
-import os
-import tempfile
 import base64
 from io import BytesIO
+import traceback
 
 DATABASE_URL = "sqlite:///audit.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -23,10 +22,11 @@ BASE.metadata.create_all(bind=engine)
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # change to your frontend origin in prod
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["key", "filename"]
 )
 templates = Jinja2Templates(directory="templates")
 
@@ -92,14 +92,11 @@ async def generate_cipher_file(
 
         headers = {
             "Content-Disposition": f'attachment; filename="{disguised_filename}"',
-            "X-Encryption-Key": key,
+            "key": key,
+            "filename": disguised_filename
         }
 
-        return StreamingResponse(
-            bio,
-            media_type="application/octet-stream",
-            headers=headers,
-        )
+        return StreamingResponse(bio, media_type="application/octet-stream", headers=headers,)
 
     except Exception as e:
         db.rollback()
@@ -144,17 +141,15 @@ async def generate_plain_file(
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
 
-    temp_file = None
     try:
         content = await file.read()
-        ext = Path(file.filename).suffix 
-        original_name = Path(file.filename).stem  
+        file_path = Path(file.filename)
+        ext = file_path.suffix
+        original_name = file_path.stem
 
-        ciphertext_b64 = base64.b64encode(content).decode()
         decrypted_bytes = decrypt_file(
-            ciphertext_b64=ciphertext_b64,
             key_hex=key,
-            output_path="",
+            file_input=content,
             algorithm=algorithm,
             mode=mode
         )
@@ -170,26 +165,22 @@ async def generate_plain_file(
         db.commit()
         db.refresh(db_record)
 
-        original_filename = original_name if ext == ".enc" else f"{original_name}_decrypted{ext}"
-
-        bio = BytesIO(decrypted_bytes)
-
         headers = {
-            "Content-Disposition": f'attachment; filename="{original_filename}"',
+            "Content-Disposition": f'attachment; filename="{original_name}"',
+            "filename": original_name
         }
 
-        return StreamingResponse(
-            bio,
-            media_type="application/octet-stream",
-            headers=headers
-        )
+        return StreamingResponse(decrypted_bytes, media_type="application/octet-stream", headers=headers)
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        print("Decryption error traceback:")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Decryption failed: {str(e)}")
 
     finally:
         await file.close()
+
 
 @app.get("/favicon.ico")
 async def favicon():

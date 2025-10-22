@@ -1,13 +1,25 @@
 import DottedGlowBackground from "@/components/ui/dotted-glow-background";
 import { GlobeDemo } from "./globe-component";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 export default function Landing() {
     return (
-        <div>
+        <>
             <div>
-                <h1 className="text-7xl text-amber-500 text-center mt-9">HASH BYTES</h1>
+                <h1 className="scroll-m-20 text-6xl font-extrabold tracking-tight text-balance text-amber-500 text-center mt-9">
+                    HASH BYTES
+                </h1>
+                <p className="leading-7 [&:not(:first-child)]:mt-6 text-2xl text-black dark:text-white text-center mt-7">
+                    Data is the new oil of modern world, in this perfectly connected and evolving world data is being 
+                    shared and processed at scale. Understanding the working of cryptography
+                    and just basics of it
+                    can make us use data securely and responsibly.
+                </p>
                 <GlobeDemo />
-                <p></p>
             </div>
             <DottedGlowBackground
             className="pointer-events-none mask-radial-to-90% mask-radial-at-center"
@@ -23,6 +35,6 @@ export default function Landing() {
             speedMax={1.6}
             speedScale={1}
             />
-        </div>
+        </>
     )
 }

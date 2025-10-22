@@ -1,6 +1,7 @@
 "use client";
 import z from "zod";
 import { encryptSchema } from "../resolver/schema";
+import { toast } from "sonner";
 
 type encryptResponse = {
     key?: string;
@@ -122,14 +123,11 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
                 };
             }
 
-            const key = response.headers.get('X-Encryption-Key') || response.headers.get('x-encryption-key') || '';
+            const key = response.headers.get('key') || '';
+            console.log(`Key: ${key}`);
             const blob = await response.blob();
-            const contentDisposition = response.headers.get('Content-Disposition');
-            console.log('Content-Disposition header:', contentDisposition); // Debug log
-            const filenameMatch = contentDisposition?.match(/filename="([^"]+)"/);
-            const filename = filenameMatch ? filenameMatch[1] : 'encrypted_file.enc';
+            const filename = response.headers.get('filename') || 'encrypted_file.enc';
 
-            // Trigger file download
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
@@ -145,7 +143,7 @@ export async function encryption(values: z.infer<typeof encryptSchema>): Promise
                 message: 'Encryption completed successfully',
                 code: response.status,
                 key: key,
-                cipher: blob, // Return blob as cipher
+                cipher: blob,
             };
         } else {
             return {

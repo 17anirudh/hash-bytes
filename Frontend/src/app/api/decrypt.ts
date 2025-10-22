@@ -53,7 +53,6 @@ export async function decryption(values: z.infer<typeof decryptSchema>): Promise
 
     try {
         if (values.cipher) {
-            // Text decryption
             const payload = {
                 cipher: values.cipher,
                 key: values.key,
@@ -110,10 +109,7 @@ export async function decryption(values: z.infer<typeof decryptSchema>): Promise
             }
 
             const blob = await response.blob();
-            const contentDisposition = response.headers.get('Content-Disposition');
-            console.log('Content-Disposition header:', contentDisposition); // Debug log
-            const filenameMatch = contentDisposition?.match(/filename="([^"]+)"/);
-            const filename = filenameMatch ? filenameMatch[1] : 'decrypted_file';
+            const filename = response.headers.get('filename') || 'decrypted_file.byt';
 
             // Trigger file download
             const url = window.URL.createObjectURL(blob);
