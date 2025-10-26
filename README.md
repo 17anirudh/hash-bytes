@@ -3,8 +3,13 @@
 ## Brief Note
 NextJS, FastAPI and Sqlite based full stack web application to be as an educational tool to quickly encrypt and decrypt any content using different cryptographic algorithms and revelant cipher modes along with explanations.
 
-## Overview
-An Educational full stack web application build using NextJS, Fast API and SQLite. This website helps to encrypt and decrypt on the fly with implemented methods along with a visually minimal yet appealing UI and strong backend support. Short descriptions of used cryptographic algorithms and cipher modes are also displayed.
+## Screenshots
+- Landing (Dark Mode)
+![Landing](/Landing.png)
+- Learning (Cipher Modes)
+![Modes](/Modes.png)
+- Learning (Algorithms)
+![Algorithms](/Algorithms.png)
 
 ## Features
 - Frontend: NextJS(Framework), Shad-cn(headless components), TailwindCSS(CSS-in-JS)
@@ -54,4 +59,3 @@ An Educational full stack web application build using NextJS, Fast API and SQLit
     pip install -r requirements.txt
     uvicorn main:app --reload
     ```
-    Open [http://localhost:8000](http://localhost:8000) with your browser to see the result.
