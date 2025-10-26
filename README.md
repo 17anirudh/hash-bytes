@@ -30,13 +30,7 @@ NextJS, FastAPI and Sqlite based full stack web application to be as an educatio
     ```
 - Running web server
     ```bash
-    npm run dev
-    # or
-    yarn dev
-    # or
-    pnpm dev
-    # or
-    bun dev
+    bun run dev
     ```
     Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
@@ -57,5 +51,9 @@ NextJS, FastAPI and Sqlite based full stack web application to be as an educatio
     ```cmd
     cd Backend
     pip install -r requirements.txt
+    ```
+
+- Running server
+    ```cmd
     uvicorn main:app --reload
     ```
